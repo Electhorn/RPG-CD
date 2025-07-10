@@ -1,42 +1,49 @@
-import { gameConfig, weapons, monsters, textStrings } from "./config.js";
+import {
+  gameConfig,
+  weapons,
+  monsters,
+  caveMonsters,
+  textStrings,
+} from "./config.js";
 import { Player } from "./player.js";
 import { updateStatsUI, updateInventoryUI } from "./ui.js";
 import { formatString, flashDamage, flashStat } from "./utils.js";
 
 export class Game {
   constructor() {
-    // --- 1. Selectores del DOM ---
     this.button1 = document.querySelector("#button1");
     this.button2 = document.querySelector("#button2");
     this.button3 = document.querySelector("#button3");
+
     this.text = document.querySelector("#text");
     this.xpText = document.querySelector("#xpText");
     this.healthText = document.querySelector("#healthText");
     this.goldText = document.querySelector("#goldText");
+
     this.monsterStats = document.querySelector("#monsterStats");
     this.monsterName = document.querySelector("#monsterName");
+    this.monsterLevel = document.querySelector("#monsterLevel");
     this.monsterHealthText = document.querySelector("#monsterHealth");
+
     this.inventoryDiv = document.querySelector("#inventory");
 
-    // --- 2. Configuración y Datos Estáticos ---
     this.gameConfig = gameConfig;
     this.weapons = weapons;
     this.monsters = monsters;
+    this.caveMonsters = caveMonsters;
     this.textStrings = textStrings;
 
-    // --- 3. Estado Inicial del Juego ---
     this.initializeState();
 
-    // --- 4. Definición de Escenas (Locations) ---
     this.locations = this.setupLocations();
 
-    // --- 5. Inicio del Juego ---
     this.init();
   }
 
   initializeState() {
     this.showSellWeapon = false;
-    this.gameState = { currentMonsterIndex: null, monsterHealth: 0 };
+
+    this.gameState = { currentMonster: null, monsterHealth: 0 };
     this.player = new Player();
   }
 
@@ -52,18 +59,21 @@ export class Game {
         buttonFunctions: [
           () => this.goStore(),
           () => this.goCave(),
-          () => this.goFight(2),
+          () => this.goFight(this.monsters[0]),
         ],
         getText: () => this.textStrings.locations.townSquare.text,
       },
       store: {
         getButtonText: () => {
           const buyHealthText = `Comprar ${this.gameConfig.healthPurchaseAmount} de vida (${this.gameConfig.healthCost} oro)`;
-          if (this.showSellWeapon) {
-            const sellWeaponText =
-              this.player.inventory.length > 1
-                ? `Vender arma por ${this.gameConfig.sellWeaponValue} oro`
-                : "Nada que vender";
+          if (this.showSellWeapon && this.player.inventory.length > 1) {
+            const sellWeaponText = `Vender arma por ${this.gameConfig.sellWeaponValue} oro`;
+            return [buyHealthText, sellWeaponText, "Volver a la plaza"];
+          } else if (
+            this.showSellWeapon &&
+            this.player.inventory.length === 1
+          ) {
+            const sellWeaponText = "Nada que vender";
             return [buyHealthText, sellWeaponText, "Volver a la plaza"];
           } else {
             return [
@@ -83,8 +93,8 @@ export class Game {
       cave: {
         getButtonText: () => this.textStrings.locations.cave.buttons,
         buttonFunctions: [
-          () => this.goFight(0),
-          () => this.goFight(1),
+          () => this.fightRandomCaveMonster(),
+          () => this.fightRandomCaveMonster(),
           () => this.goTown(),
         ],
         getText: () => this.textStrings.locations.cave.text,
@@ -166,21 +176,30 @@ export class Game {
     this.update(this.locations.townSquare);
   }
   goStore() {
-    this.showSellWeapon = false;
     this.update(this.locations.store);
   }
   goCave() {
     this.update(this.locations.cave);
   }
-  goFight(monsterIndex) {
-    this.gameState.currentMonsterIndex = monsterIndex;
-    const currentMonster = this.monsters[this.gameState.currentMonsterIndex];
-    this.gameState.monsterHealth = currentMonster.health;
-    this.monsterStats.classList.add("visible");
-    this.monsterName.innerText = currentMonster.name;
-    this.monsterHealthText.innerText = this.gameState.monsterHealth;
+
+  goFight(monster) {
     this.update(this.locations.fight);
+    Object.assign(this.gameState, {
+      currentMonster: monster,
+      monsterHealth: monster.health,
+    });
+    this.monsterName.innerText = monster.name;
+    this.monsterLevel.innerText = monster.level;
+    this.monsterHealthText.innerText = this.gameState.monsterHealth;
+    this.monsterStats.classList.add("visible");
   }
+
+  fightRandomCaveMonster() {
+    const index = Math.floor(Math.random() * this.caveMonsters.length);
+    const monster = this.caveMonsters[index];
+    this.goFight(monster);
+  }
+
   easterEgg() {
     this.update(this.locations.easterEgg);
   }
@@ -193,7 +212,10 @@ export class Game {
   }
   updateAllUI() {
     this.updateStatsUI();
-    if (this.gameState.monsterHealth > 0) {
+    if (
+      this.gameState.monsterHealth > 0 &&
+      this.gameState.monsterHealth !== this.monsterHealthText.innerText
+    ) {
       this.monsterHealthText.innerText = this.gameState.monsterHealth;
     }
   }
@@ -273,7 +295,7 @@ export class Game {
   }
 
   attack() {
-    const currentMonster = this.monsters[this.gameState.currentMonsterIndex];
+    const currentMonster = this.gameState.currentMonster;
     const playerWeapon =
       this.player.inventory[this.player.inventory.length - 1];
     let message = formatString(
@@ -308,15 +330,19 @@ export class Game {
   }
 
   dodge() {
-    const monster = this.monsters[this.gameState.currentMonsterIndex];
+    const monster = this.gameState.currentMonster;
     this.text.innerText = formatString(
       this.textStrings.gameMessages.dodge,
       monster.name
     );
   }
 
-  calculateMonsterDamage(level) {
-    return Math.max(0, level * 5 - Math.floor(Math.random() * this.player.xp));
+  calculateMonsterDamage() {
+    const monster = this.gameState.currentMonster;
+    return Math.max(
+      0,
+      monster.level * 5 - Math.floor(Math.random() * this.player.xp)
+    );
   }
   isMonsterHit() {
     return (
@@ -329,14 +355,14 @@ export class Game {
     if (this.player.health <= 0) {
       this.lose();
     } else if (this.gameState.monsterHealth <= 0) {
-      this.monsters[this.gameState.currentMonsterIndex].name === "dragón"
+      this.gameState.currentMonster.name === "dragón"
         ? this.winGame()
         : this.defeatMonster();
     }
   }
 
   defeatMonster() {
-    const monster = this.monsters[this.gameState.currentMonsterIndex];
+    const monster = this.gameState.currentMonster;
     this.player.gold += Math.floor(
       monster.level * this.gameConfig.monsterGoldMultiplier
     );
@@ -361,6 +387,16 @@ export class Game {
     this.updateInventoryUI();
     this.goTown();
   }
+
+  /**
+   * Simulates a guessing game where the player picks a number and
+   * compares it against a random set of numbers. If the player's
+   * guess matches any of the random numbers, they win gold;
+   * otherwise, they lose health. The outcome is displayed as a
+   * message, and the player's stats are updated accordingly.
+   *
+   * @param {number} guess - The number guessed by the player.
+   */
 
   pick(guess) {
     const numbers = [];

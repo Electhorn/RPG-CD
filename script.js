@@ -14,6 +14,7 @@ class Game {
     this.goldText = document.querySelector("#goldText");
     this.monsterStats = document.querySelector("#monsterStats");
     this.monsterName = document.querySelector("#monsterName");
+    this.monsterLevel = document.querySelector("#monsterLevel");
     this.monsterHealthText = document.querySelector("#monsterHealth");
     this.inventoryDiv = document.querySelector("#inventory");
 
@@ -284,10 +285,11 @@ class Game {
   }
   goFight(monsterIndex) {
     this.gameState.currentMonsterIndex = monsterIndex;
-    const currentMonster = this.monsters[this.gameState.currentMonsterIndex];
+    const currentMonster = monsters[this.gameState.currentMonsterIndex];
     this.gameState.monsterHealth = currentMonster.health;
     this.monsterStats.classList.add("visible");
     this.monsterName.innerText = currentMonster.name;
+    this.monsterLevel.innerText = currentMonster.level;
     this.monsterHealthText.innerText = this.gameState.monsterHealth;
     this.update(this.locations.fight);
   }
