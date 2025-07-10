@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RPG - Caza Dragones</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Lato:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* === ESTILOS BASE Y VARIABLES (Sin cambios) === */
+        :root {
+            --font-title: "Cinzel", serif;
+            --font-body: "Lato", sans-serif;
+            --color-bg: #1a1a2e;
+            --color-container-bg: #f5e8c7;
+            --color-text-dark: #3e2723;
+            --color-text-light: #f5e8c7;
+            --color-accent: #c84b31;
+            --color-accent-hover: #a6341f;
+            --color-gold: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* === 1. LAYOUT PRINCIPAL: MOBILE-FIRST === */
+        body {
+            font-family: var(--font-body);
+            background-color: var(--color-bg);
+            color: var(--color-text-dark);
+            height: 100vh;
+            overflow: hidden;
+            padding: 10px;
+            /* Un poco de espacio en los bordes */
+        }
+
+        #game {
+            width: 100%;
+            height: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            background-color: var(--color-container-bg);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), 0 0 0 5px #3e2723;
+            border: 3px solid #6d4c41;
+
+            /* --- POR DEFECTO: Layout de UNA SOLA COLUMNA (Móvil Vertical) --- */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            /* Scroll interno si el contenido no cabe */
+        }
+
+        /* Contenedores de UI */
+        #ui-left,
+        #ui-right {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #ui-right {
+            flex-grow: 1;
+            /* Columna derecha se estira para ocupar espacio */
+        }
+
+        #text {
+            flex-grow: 1;
+            /* El panel de texto se estira dentro de su columna */
+            min-height: 120px;
+            overflow-y: auto;
+        }
+
+
+        /* === 2. LAYOUT AVANZADO: DISPOSITIVOS HORIZONTALES Y ESCRITORIO === */
+        /* Se activa si: 
+   - El dispositivo está en horizontal Y es más ancho que 550px.
+   - O si la ventana del navegador es más ancha que 820px (tablets grandes y PC).
+*/
+        @media (orientation: landscape) and (min-width: 550px),
+        (min-width: 820px) {
+            #game {
+                display: grid;
+                /* NUEVO GRID: 2 filas (título, contenido) y 2 columnas */
+                grid-template-rows: auto 1fr;
+                grid-template-columns: 280px 1fr;
+                gap: 25px;
+                padding: 25px;
+                overflow: hidden;
+            }
+
+            /* El título (H1) se expande a lo ancho de las 2 columnas */
+            h1 {
+                grid-column: 1 / -1;
+                /* Ocupa desde la primera línea de columna hasta la última */
+            }
+
+            #ui-left {
+                grid-row: 2;
+                /* Colocamos explícitamente en la fila 2 */
+                grid-column: 1;
+            }
+
+            #ui-right {
+                grid-row: 2;
+                /* Colocamos explícitamente en la fila 2 */
+                grid-column: 2;
+                flex-grow: 0;
+            }
+
+            #controls {
+                flex-direction: row;
+            }
+        }
+
+
+        /* === 3. ESTILOS DE COMPONENTES (La mayoría sin cambios) === */
+        h1 {
+            font-family: var(--font-title);
+            text-align: center;
+            font-size: 2.2em;
+            color: var(--color-text-dark);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+            padding-bottom: 10px;
+            font-weight: 900;
+        }
+
+        #stats,
+        #controls,
+        #monsterStats,
+        #inventory {
+            background-color: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        #controls,
+        #stats {
+            justify-content: space-around;
+        }
+
+        #inventory {
+            flex-direction: column;
+            text-align: center;
+            gap: 8px;
+        }
+
+        #inventory h4 {
+            font-family: var(--font-title);
+            font-weight: 700;
+            font-size: 1.2em;
+            margin: 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            width: 100%;
+            /* Asegura que la línea ocupe todo el ancho */
+        }
+
+        #stats .stat,
+        #inventory div {
+            font-family: var(--font-title);
+            font-size: 1.1em;
+        }
+
+        #stats .stat:last-child strong {
+            color: var(--color-gold);
+            text-shadow: 0 0 5px black;
+        }
+
+        #monsterStats {
+            background-color: var(--color-accent);
+            color: var(--color-text-light);
+            border-color: #a6341f;
+            justify-content: space-around;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+
+        #monsterStats.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        button {
+            font-family: var(--font-title);
+            font-size: 1em;
+            font-weight: 700;
+            color: var(--color-text-light);
+            background-color: var(--color-accent);
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #8c2b1a;
+            transition: all 0.15s ease-out;
+            flex-grow: 1;
+            /* Los botones crecen para ocupar espacio en su contenedor */
+        }
+
+        button:hover {
+            background-color: var(--color-accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #8c2b1a;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #8c2b1a;
+        }
+
+        #text {
+            background-color: #e8d9b1;
+            color: var(--color-text-dark);
+            padding: 20px;
+            border-radius: 8px;
+            line-height: 1.6;
+            border: 1px dashed rgba(0, 0, 0, 0.2);
+        }
+
+        /* Animaciones no cambian */
+        @keyframes damage-flash {
+            0% {
+                text-shadow: 0 0 0 transparent;
+            }
+
+            50% {
+                text-shadow: 0 0 10px red, 0 0 15px red;
+            }
+
+            100% {
+                text-shadow: 0 0 0 transparent;
+            }
+        }
+
+        .damage-taken {
+            animation: damage-flash 0.5s ease-out;
+        }
+
+        @keyframes gold-flash {
+            50% {
+                text-shadow: 0 0 10px var(--color-gold), 0 0 15px white;
+            }
+        }
+
+        @keyframes xp-flash {
+            50% {
+                text-shadow: 0 0 10px #6fdc6f, 0 0 15px white;
+            }
+        }
+
+        .gold-gain {
+            animation: gold-flash 0.6s ease-out;
+        }
+
+        .xp-gain {
+            animation: xp-flash 0.6s ease-out;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game">
+        <h1>Caza Dragones</h1>
+        <!-- COLUMNA IZQUIERDA (INFORMACIÓN) -->
+        <div id="ui-left">
+            <div id="stats">
+                <span class="stat">XP: <strong><span id="xpText">0</span></strong></span>
+                <span class="stat">Salud: <strong><span id="healthText">100</span></strong></span>
+                <span class="stat">Oro: <strong><span id="goldText">50</span></strong></span>
+            </div>
+            <div id="inventory"></div>
+            <div id="monsterStats">
+                <span class="stat">Monstruo: <strong><span id="monsterName"></span></strong></span>
+                <span class="stat">Salud: <strong><span id="monsterHealth"></span></strong></span>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA (INTERACCIÓN) -->
+        <div id="ui-right">
+
+            <div id="controls">
+                <button id="button1">Ir a la tienda</button>
+                <button id="button2">Ir a la cueva</button>
+                <button id="button3">Luchar contra el dragón</button>
+            </div>
+            <div id="text">
+                Bienvenido/a a Caza Dragones. Debes derrotar al dragón que impide que la gente abandone el pueblo. Estás
+                en la plaza del pueblo. ¿A dónde quieres ir? Usa los botones de arriba.
+            </div>
+        </div>
+    </div>
+    <script src="script.js" defer>
+    </script>
+</body>
+
+</html>
